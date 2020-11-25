@@ -1,0 +1,29 @@
+---
+  - name: Web PBook One
+    hosts: webservers
+    become: yes
+    tasks:
+      - name: Install docker and pip.
+        apt:
+          name:
+            - docker.io
+            - python3-pip
+
+      - name: Install docker python module.
+        pip:
+          name:
+            - docker
+
+      - name: Install the docker container.
+        docker_container:
+          name: dvwa
+          image: cyberxsecurity/dvwa
+          published_ports: 80:80
+          state: started
+          restart_policy: always
+
+      - name: Enable the docker service.
+        systemd:
+          name: docker.service
+          enabled: yes
+          state: started
