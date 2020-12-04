@@ -1,0 +1,45 @@
+---
+# TODO: Add system checking.
+  - name: elk playbook two
+    hosts: elk
+    become: yes
+    tasks:
+      - name: Install docker and pip.
+        apt:
+          update_cache: yes
+          name: 
+            - 'docker.io'
+            - 'python3-pip'
+
+      - name: Install docker python module.
+        pip:
+          name:
+            - docker
+
+      - name: Tweak sysctl parameters for elk.
+        sysctl:
+          key: "{{ item.key }}"
+          value: "{{ item.value }}"
+          reload: yes
+        loop:
+          - { key: 'vm.swappiness', value: '1' }
+          - { key: 'vm.max_map_count', value: '262144' }
+          - { key: 'net.ipv4.tcp_retries2', value: '5' }
+
+      - name: Enable and start docker service.
+        service:
+          name: docker
+          enabled: yes
+          state: started
+
+      - name: Install elk docker container.
+        docker_container:
+          name: elk
+          image: sebp/elk:761
+          state: started
+          restart_policy: always
+          published_ports:
+            - '5044:5044'
+            - '5601:5601'
+            - '9200:9200'
+
