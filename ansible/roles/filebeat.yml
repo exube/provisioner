@@ -1,0 +1,45 @@
+---
+  - name: Install Filebeat on webservers.
+    hosts: webservers
+    become: yes
+    tasks:
+      # TODO: Automate verification with GPG and APT. URL: 'https://artifacts.elastic.co/GPG-KEY-elasticsearch'
+      - name: Fetch and verify Filebeat package.
+        get_url:
+          url: 'https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.6.1-amd64.deb'
+          checksum: 'sha256:6e1a83abf224761fc645b788040e3f91e931ee4e5c23f599617d7ab3c31a4ac9'
+          dest: '/root/'
+
+      - name: Install Filebeat.
+        apt:
+          deb: '/root/filebeat-7.6.1-amd64.deb'
+
+      - name: Copy configuration files for Filebeat.
+        copy:
+          # TODO: ???
+          src: '/etc/ansible/files/filebeat/filebeat-config.yml'
+          dest: '/etc/filebeat/filebeat.yml'
+        register: filebeat_config
+
+      - name: Enable Filebeat System module.
+        command:
+          argv:
+            - 'filebeat'
+            - 'modules'
+            - 'enable'
+            - 'system'
+          creates: '/etc/filebeat/modules.d/system.yml'
+          removes: '/etc/filebeat/modules.d/system.yml.disabled'
+
+      - name: Setup Kibana dashboards.
+        command:
+          argv:
+            - 'filebeat'
+            - 'setup'
+        when: filebeat_config.changed
+
+      - name: Enable Filebeat service.
+        service:
+          name: 'filebeat'
+          enabled: yes
+          state: 'restarted'
