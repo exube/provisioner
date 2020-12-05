@@ -1,0 +1,46 @@
+---
+  - name: Install Metricbeat to webservers.
+    hosts: webservers
+    become: yes
+    tasks:
+      - name: Add APT key for elasticsearch.
+        apt_key:
+          url: 'https://artifacts.elastic.co/GPG-KEY-elasticsearch'
+          id: 'D88E42B4'
+
+      - name: Add Beats repository for APT.
+        apt_repository:
+          repo: 'deb https://artifacts.elastic.co/packages/7.x/apt stable main'
+          state: 'present'
+
+      - name: Install metricbeat.
+        apt:
+          name: 'metricbeat=7.6.1'
+
+      - name: Enable Metricbeat Docker module.
+        command:
+          argv:
+            - 'metricbeat'
+            - 'modules'
+            - 'enable'
+            - 'docker'
+          creates: '/etc/metricbeat/modules.d/docker.yml'
+
+      - name: Setup Metricbeat configuration files.
+        copy:
+          src: '/etc/ansible/files/metricbeat/metricbeat.yml'
+          dest: '/etc/metricbeat/'
+        register: metricbeat_config
+
+      - name: Setup metricbeat.
+        command:
+          argv:
+            - 'metricbeat'
+            - 'setup'
+        when: metricbeat_config.changed
+
+      - name: Enable and restart Metricbeat service.
+        service:
+          name: 'metricbeat'
+          state: 'restarted'
+          enabled: yes
